@@ -5,6 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SDK_ROOT="${ROOT}/../cosmos-sdk"
 GOGO_INCLUDE="$(go env GOPATH)/pkg/mod/github.com/cosmos/gogoproto@v1.7.0"
+GATEWAY_ROOT="$(go env GOPATH)/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.16.0"
+GATEWAY_INCLUDE="${GATEWAY_ROOT}/third_party/googleapis"
 OUT_DIR="${ROOT}/.proto-out"
 GENERATED_DIR="${ROOT}/x/claim/types"
 
@@ -18,8 +20,18 @@ if [ ! -x "$(go env GOPATH)/bin/protoc-gen-gogo" ]; then
   exit 1
 fi
 
+if [ ! -x "$(go env GOPATH)/bin/protoc-gen-grpc-gateway" ]; then
+  echo "未找到 protoc-gen-grpc-gateway；请安装与 go.mod 一致的 v1.16.0。" >&2
+  exit 1
+fi
+
 if [ ! -d "${SDK_ROOT}/proto" ]; then
   echo "未找到已锁定的 Cosmos SDK 子模块；请使用 git clone --recurse-submodules。" >&2
+  exit 1
+fi
+
+if [ ! -f "${GATEWAY_INCLUDE}/google/api/annotations.proto" ]; then
+  echo "未找到 gRPC-Gateway 的 Google API 注释原型。" >&2
   exit 1
 fi
 
@@ -30,7 +42,9 @@ PATH="$(go env GOPATH)/bin:${PATH}" protoc \
   -I "${ROOT}/proto" \
   -I "${SDK_ROOT}/proto" \
   -I "${GOGO_INCLUDE}" \
+  -I "${GATEWAY_INCLUDE}" \
   --gogo_out=plugins=grpc,paths=import:"${OUT_DIR}" \
+  --grpc-gateway_out=logtostderr=true,paths=import:"${OUT_DIR}" \
   "${ROOT}/proto/catcoin/claim/v1/tx.proto" \
   "${ROOT}/proto/catcoin/claim/v1/types.proto" \
   "${ROOT}/proto/catcoin/claim/v1/query.proto"
@@ -41,8 +55,8 @@ if [ ! -d "${SOURCE_DIR}" ]; then
   exit 1
 fi
 
-find "${GENERATED_DIR}" -maxdepth 1 -type f -name '*.pb.go' -delete
-mv "${SOURCE_DIR}"/*.pb.go "${GENERATED_DIR}/"
+find "${GENERATED_DIR}" -maxdepth 1 -type f \( -name '*.pb.go' -o -name '*.pb.gw.go' \) -delete
+find "${SOURCE_DIR}" -maxdepth 1 -type f \( -name '*.pb.go' -o -name '*.pb.gw.go' \) -exec mv {} "${GENERATED_DIR}/" \;
 rm -rf "${OUT_DIR}"
 
 echo "已生成 x/claim Protobuf Go 源码。"
