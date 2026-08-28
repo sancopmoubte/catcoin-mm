@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package catcoin.claim.v1;
+
+option go_package = "github.com/sancopmoubte/my-mobile-chain/chain/catcoin-app/x/claim/types";
+
+import "gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.equal_all) = true;
+
+// ClaimRecord 保存单个地址的确定性领取进度。
+message ClaimRecord {
+  string claimer = 1;
+  uint64 claimed_umm = 2;
+  uint64 claim_count = 3;
+  int64 last_claim_unix = 4;
+}
+
+// UsedCredential 防止资格凭证被跨地址或跨交易重放。
+message UsedCredential {
+  string credential_id = 1;
+  string claimer = 2;
+  int64 used_at_unix = 3;
+}
+
+// ClaimAuthority 仅保存 Ed25519 公钥，不保存私钥、助记词或种子。
+message ClaimAuthority {
+  string issuer_key_id = 1;
+  bytes ed25519_public_key = 2;
+  bool revoked = 3;
+  int64 activation_height = 4;
+}
+
+// DailyDistribution 保存当前 UTC 日从固定领取池已转出的数量。
+message DailyDistribution {
+  int64 utc_day = 1;
+  uint64 distributed_umm = 2;
+}
+
+// GenesisState 固定领取参数与资格公钥。领取资金位于无铸币权限的 claim 模块账户。
+message GenesisState {
+  repeated ClaimAuthority authorities = 1 [(gogoproto.nullable) = false];
+  string denom = 2;
+  uint64 first_claim_umm = 3;
+  uint64 max_claim_per_address_umm = 4;
+  int64 claim_interval_seconds = 5;
+  repeated ClaimRecord records = 6 [(gogoproto.nullable) = false];
+  repeated UsedCredential used_credentials = 7 [(gogoproto.nullable) = false];
+  uint64 daily_claim_limit_umm = 8;
+  DailyDistribution daily_distribution = 9 [(gogoproto.nullable) = false];
+}

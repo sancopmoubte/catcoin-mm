@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package catcoin.claim.v1;
+
+option go_package = "github.com/sancopmoubte/my-mobile-chain/chain/catcoin-app/x/claim/types";
+
+import "catcoin/claim/v1/types.proto";
+import "gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+// Query 让钱包读取已写入的链上领取进度与领取池余额。
+service Query {
+  rpc ClaimRecord(QueryClaimRecordRequest) returns (QueryClaimRecordResponse);
+  rpc Pool(QueryPoolRequest) returns (QueryPoolResponse);
+  rpc Authority(QueryAuthorityRequest) returns (QueryAuthorityResponse);
+}
+
+message QueryClaimRecordRequest {
+  string claimer = 1;
+}
+
+message QueryClaimRecordResponse {
+  ClaimRecord record = 1;
+  uint64 next_claim_umm = 2;
+  int64 next_claim_at_unix = 3;
+  bool capped = 4;
+  uint64 claimed_umm = 5;
+  uint64 claim_count = 6;
+  int64 last_claim_unix = 7;
+}
+
+message QueryPoolRequest {}
+
+message QueryPoolResponse {
+  string denom = 1;
+  uint64 available_umm = 2;
+}
+
+message QueryAuthorityRequest {
+  string issuer_key_id = 1;
+}
+
+message QueryAuthorityResponse {
+  ClaimAuthority authority = 1;
+}

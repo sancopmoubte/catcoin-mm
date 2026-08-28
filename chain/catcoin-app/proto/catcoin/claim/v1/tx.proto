@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package catcoin.claim.v1;
+
+option go_package = "github.com/sancopmoubte/my-mobile-chain/chain/catcoin-app/x/claim/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+// Msg 只定义领取交易；不存在可由用户输入金额的领取接口。
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc Claim(MsgClaim) returns (MsgClaimResponse);
+}
+
+// Voucher 是链下资格服务签发、链上验证的一次性凭证。
+message Voucher {
+  string chain_id = 1;
+  string address = 2;
+  string credential_id = 3;
+  int64 expires_at_unix = 4;
+  string issuer_key_id = 5;
+  bytes signature = 6;
+}
+
+// MsgClaim 由领取地址本人签名；金额完全由链上状态机计算。
+message MsgClaim {
+  option (cosmos.msg.v1.signer) = "claimer";
+
+  string claimer = 1;
+  Voucher voucher = 2 [(gogoproto.nullable) = false];
+}
+
+message MsgClaimResponse {
+  uint64 claimed_umm = 1;
+  uint64 total_claimed_umm = 2;
+  uint64 next_claim_umm = 3;
+  int64 next_claim_at_unix = 4;
+}
