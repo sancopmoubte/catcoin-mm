@@ -4,7 +4,7 @@ import { Any } from "cosmjs-types/google/protobuf/any";
 import { AuthInfo, TxBody, TxRaw } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { BinaryWriter } from "cosmjs-types/binary";
 import { FormEvent, useMemo, useState } from "react";
-import { defaultConfig, formatMm, isReadyForChain, isWalletAddress, mmToAtomic, PublicNetworkConfig } from "./wallet";
+import { ClaimPoolStatus, defaultConfig, formatMm, isReadyForChain, isReadyForPoolQuery, isWalletAddress, mmToAtomic, parseClaimPoolStatus, PublicNetworkConfig } from "./wallet";
 
 declare global {
   interface Window { CATCOIN_CONFIG?: Partial<PublicNetworkConfig>; }
@@ -98,6 +98,8 @@ export default function App() {
   const [mnemonic, setMnemonic] = useState("");
   const [balance, setBalance] = useState("0");
   const [height, setHeight] = useState("—");
+  const [poolStatus, setPoolStatus] = useState<ClaimPoolStatus | null>(null);
+  const [poolNotice, setPoolNotice] = useState("配置 HTTPS 链 API 后显示领取池与每日固定池分发状态。");
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("0.00000001");
   const [notice, setNotice] = useState("请先配置 HTTPS RPC，再创建或解锁钱包。");
@@ -109,6 +111,25 @@ export default function App() {
   const unlocked = Boolean(wallet && address);
   const updateConfig = (key: keyof PublicNetworkConfig, value: string) => setConfig(current => ({ ...current, [key]: value.trim() }));
   const addActivity = (item: Activity) => setActivity(current => [item, ...current].slice(0, 5));
+
+  async function refreshPoolStatus() {
+    if (!isReadyForPoolQuery(config)) {
+      setPoolStatus(null);
+      setPoolNotice("未配置 HTTPS 链 API；静态网页不会伪造领取池或日额度数据。");
+      return;
+    }
+    try {
+      const response = await fetch(`${config.apiEndpoint.replace(/\/$/, "")}/catcoin/claim/v1/pool`);
+      if (!response.ok) throw new Error("领取池查询接口不可用");
+      const next = parseClaimPoolStatus(await response.json());
+      if (next.denom !== config.denom) throw new Error(`领取池 denom 不匹配：${next.denom}`);
+      setPoolStatus(next);
+      setPoolNotice("已读取链上领取池和本 UTC 日固定池分发统计。");
+    } catch (error) {
+      setPoolStatus(null);
+      setPoolNotice(error instanceof Error ? error.message : "读取领取池状态失败");
+    }
+  }
 
   async function refresh() {
     if (!ready) { setNotice("请在下方填入你的 HTTPS RPC 地址和正确 chain ID。静态网页不能自行提供节点。"); return; }
@@ -125,6 +146,7 @@ export default function App() {
         const client = await StargateClient.connect(endpoint);
         try { setBalance((await client.getBalance(address, config.denom)).amount || "0"); } finally { client.disconnect(); }
       }
+      await refreshPoolStatus();
       setNotice("已从配置的候选链 RPC 读取状态。");
     } catch (error) { setNotice(error instanceof Error ? error.message : "读取候选链失败"); } finally { setBusy(null); }
   }
@@ -190,7 +212,8 @@ export default function App() {
       <section className="warning"><strong>候选试用网络，不是正式资产。</strong> 静态网页只在本机签名并直连你配置的 HTTPS 服务；不会保存、上传或托管你的钱包私钥。</section>
       <section className="balance-card"><span>本机钱包余额</span><h1>{formatMm(balance)} <small>{config.displaySymbol}</small></h1><p>{address || "创建或解锁钱包后显示地址"}</p><button className="outline" onClick={() => void refresh()} disabled={busy !== null}>{busy === "refresh" ? "正在读取…" : "刷新链上余额"}</button></section>
 
-      <section className="card config-card"><h2>1. 公开网络配置</h2><p>此处只填公开 HTTPS 地址，不填助记词、私钥或密码。候选节点停机时，钱包仍可离线保留，但不能查询或广播。</p><div className="fields"><label>网络名称<input value={config.networkLabel} onChange={event => updateConfig("networkLabel", event.target.value)} /></label><label>Chain ID<input value={config.chainId} onChange={event => updateConfig("chainId", event.target.value)} /></label><label>HTTPS RPC<input inputMode="url" placeholder="https://rpc.example.com" value={config.rpcEndpoint} onChange={event => updateConfig("rpcEndpoint", event.target.value)} /></label><label>HTTPS 凭证服务（领取可选）<input inputMode="url" placeholder="https://issuer.example.com" value={config.issuerEndpoint} onChange={event => updateConfig("issuerEndpoint", event.target.value)} /></label></div></section>
+      <section className="card"><h2>链上领取池状态</h2>{poolStatus ? <><p>可用领取池：<strong>{formatMm(poolStatus.availableUmm)} MM</strong></p><p>本 UTC 日已分发：<strong>{formatMm(poolStatus.dailyDistributedUmm)} / {formatMm(poolStatus.dailyClaimLimitUmm)} MM</strong></p><p>本 UTC 日剩余可分发：<strong>{formatMm(poolStatus.dailyRemainingUmm)} MM</strong></p><span>UTC 日编号：{poolStatus.utcDay} · 下次重置：{new Date(Number(poolStatus.nextResetAtUnix) * 1000).toLocaleString()}</span></> : <p>{poolNotice}</p>}</section>
+      <section className="card config-card"><h2>1. 公开网络配置</h2><p>此处只填公开 HTTPS 地址，不填助记词、私钥或密码。候选节点停机时，钱包仍可离线保留，但不能查询或广播。</p><div className="fields"><label>网络名称<input value={config.networkLabel} onChange={event => updateConfig("networkLabel", event.target.value)} /></label><label>Chain ID<input value={config.chainId} onChange={event => updateConfig("chainId", event.target.value)} /></label><label>HTTPS RPC<input inputMode="url" placeholder="https://rpc.example.com" value={config.rpcEndpoint} onChange={event => updateConfig("rpcEndpoint", event.target.value)} /></label><label>HTTPS 链 API（领取池查询）<input inputMode="url" placeholder="https://api.example.com" value={config.apiEndpoint} onChange={event => updateConfig("apiEndpoint", event.target.value)} /></label><label>HTTPS 凭证服务（领取可选）<input inputMode="url" placeholder="https://issuer.example.com" value={config.issuerEndpoint} onChange={event => updateConfig("issuerEndpoint", event.target.value)} /></label></div></section>
 
       {!storedWallet ? <section className="card"><h2>2. 创建本机钱包</h2><p>钱包只加密保存在此浏览器。本页没有登录、数据库或后台钱包托管。</p><form onSubmit={createWallet}><label>设置本机钱包密码<input type="password" autoComplete="new-password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} placeholder="至少 8 位" required /></label><button disabled={busy !== null}>{busy === "create" ? "正在创建…" : "创建并解锁"}</button></form></section> : !unlocked ? <section className="card"><h2>2. 解锁本机钱包</h2><p className="address">{address}</p><form onSubmit={unlockWallet}><label>本机钱包密码<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required /></label><button disabled={busy !== null}>{busy === "unlock" ? "正在解锁…" : "解锁钱包"}</button></form></section> : <>
         <section className="card"><h2>2. 领取候选试用 MM</h2><p>链上规则：首笔 0.00000001 MM、每 24 小时递增、每地址最多 1 MM；全网每个 UTC 日最多从固定领取池分发 210 MM。领取需要独立 HTTPS 凭证服务，额度和防批量规则由链执行。</p><button onClick={() => void claimCandidate()} disabled={busy !== null || !config.issuerEndpoint}>{busy === "claim" ? "正在领取…" : "一键领取候选试用 MM"}</button></section>
