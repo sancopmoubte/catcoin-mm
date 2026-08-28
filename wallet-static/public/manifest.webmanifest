@@ -3,7 +3,8 @@
   "short_name": "猫猫币钱包",
   "description": "纯静态 Safari/PWA 钱包：本地签名，直连配置的候选链 RPC。非正式资产。",
   "display": "standalone",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "background_color": "#f7f2e8",
   "theme_color": "#102d38"
 }
