@@ -1,0 +1,25 @@
+# 候选链构建和隔离测试状态
+chain/catcoin-app/build/
+chain/catcoin-app/.claim-e2e/
+chain/catcoin-app/.proto-out/
+
+# 静态 PWA 可再生成产物
+wallet-static/node_modules/
+wallet-static/dist/
+
+# 任何运行时密钥、助记词或环境文件均禁止进入公开仓库
+**/issuer.key
+**/*.key
+**/*.pem
+**/*.p12
+**/*.keystore
+**/*.jks
+**/*.mnemonic
+**/*.seed
+**/.env
+**/node_key.json
+**/priv_validator_key.json
+**/priv_validator_state.json
+**/keyring-*/
+**/data/
+*.log
