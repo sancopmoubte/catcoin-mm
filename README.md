@@ -38,6 +38,8 @@ pnpm build
 
 将 `wallet-static/dist/` 部署到任意 HTTPS 静态托管即可。部署前只需编辑公开文件 `wallet-static/public/catcoin-config.js`，填入你运营的 HTTPS RPC 和（如启用免费领取）独立 HTTPS 凭证服务地址。**不得**把私钥、助记词、签发密钥或主机密码放进此文件或浏览器代码。
 
+本仓库配置了 GitHub Pages 自动部署；启用 Pages 的 Actions 来源后，静态入口为 <https://sancopmoubte.github.io/catcoin-mm/>。该入口不依赖 Manus 沙盒，且默认不填临时 RPC/凭证端点。网页可长期托管和离线打开，但实时链上能力仍取决于独立运营的 HTTPS RPC 与凭证服务。
+
 ## 候选链本地测试
 
 候选应用的 Protobuf 生成流程依赖同级的 Cosmos SDK v0.50.15 源码。先在 `chain/` 下准备该公开上游依赖：
