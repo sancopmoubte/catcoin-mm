@@ -1,9 +1,9 @@
 [package]
-name = "bitcoin_light_client"
+name = "catcoin_light_client"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "比特币实验链的 Rust 轻客户端验证核心"
+description = "猫猫币（MM）候选链的 Rust 轻客户端验证核心"
 
 [lib]
 crate-type = ["rlib", "cdylib", "staticlib"]
