@@ -1,0 +1,29 @@
+{
+  "name": "catcoin-static-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cosmjs/encoding": "0.36.0",
+    "@cosmjs/proto-signing": "0.36.0",
+    "@cosmjs/stargate": "0.36.0",
+    "cosmjs-types": "0.10.1",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.6",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.1",
+    "typescript": "5.9.3",
+    "vite": "7.1.9",
+    "vitest": "2.1.9"
+  }
+}
