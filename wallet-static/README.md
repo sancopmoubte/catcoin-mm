@@ -15,6 +15,12 @@ pnpm build
 
 产物仅在 `dist/`。可将该目录部署到任何支持 HTTPS 的静态文件托管。用于免费领取的 `issuerEndpoint` 必须是独立服务：它持有私钥并签发短期、地址绑定凭证；**绝不能**把签发私钥放入本 PWA。
 
+## GitHub Pages 静态部署
+
+公开仓库的 `.github/workflows/deploy-pages.yml` 会在 `main` 分支的 `wallet-static/` 文件变更后构建本目录，并发布到 GitHub Pages 的仓库子路径。启用 Pages 的 Actions 来源后，固定入口为 <https://sancopmoubte.github.io/catcoin-mm/>，不依赖 Manus 沙盒。构建时会将资源、配置文件、PWA 启动范围和 Service Worker 自动置于 `/catcoin-mm/` 路径；本地构建仍保持根路径。
+
+该静态站点默认不配置 RPC 或凭证端点。沙盒回收后，GitHub Pages 页面和已缓存的离线界面仍可打开；实时余额、转账广播和受控领取仍分别需要你自行运行的 HTTPS RPC 与凭证服务。
+
 ## 功能边界
 
 | 功能 | 静态 PWA | 外部依赖 |
