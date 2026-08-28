@@ -4,6 +4,8 @@ window.CATCOIN_CONFIG = {
   networkLabel: "候选试用网络（非正式资产）",
   chainId: "catcoin-claim-trial-8",
   rpcEndpoint: "",
+  // 仅用于 GET /catcoin/claim/v1/pool；可与 RPC 同源，也可使用运营方的 HTTPS API 网关。
+  apiEndpoint: "",
   issuerEndpoint: "",
   denom: "umm",
   displaySymbol: "MM",
