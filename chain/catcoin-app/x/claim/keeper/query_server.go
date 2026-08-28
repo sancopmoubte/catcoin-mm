@@ -45,7 +45,39 @@ func (k Keeper) Pool(goCtx context.Context, _ *types.QueryPoolRequest) (*types.Q
 	if err != nil {
 		return nil, err
 	}
-	return &types.QueryPoolResponse{Denom: state.Denom, AvailableUmm: k.PoolBalance(goCtx, state.Denom)}, nil
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	daily, err := currentDailyDistribution(state.DailyDistribution, ctx.BlockTime().Unix())
+	if err != nil {
+		return nil, err
+	}
+	if daily.DistributedUmm > state.DailyClaimLimitUmm {
+		return nil, errors.New("每日领取统计超过固定上限")
+	}
+	return &types.QueryPoolResponse{
+		Denom:              state.Denom,
+		AvailableUmm:       k.PoolBalance(goCtx, state.Denom),
+		DailyClaimLimitUmm: state.DailyClaimLimitUmm,
+		DailyDistributedUmm: daily.DistributedUmm,
+		DailyRemainingUmm:  state.DailyClaimLimitUmm - daily.DistributedUmm,
+		UtcDay:             daily.UtcDay,
+		NextResetAtUnix:    (daily.UtcDay + 1) * secondsPerUTCDay,
+	}, nil
+}
+
+// currentDailyDistribution 将历史日统计按当前区块 UTC 日解释为已重置的零分发状态。
+// 它只用于查询，不写入任何链上状态；交易仍只能由 consumeDailyDistribution 消费额度。
+func currentDailyDistribution(current types.DailyDistribution, nowUnix int64) (types.DailyDistribution, error) {
+	if nowUnix < 0 {
+		return types.DailyDistribution{}, errors.New("区块时间早于 Unix epoch")
+	}
+	utcDay := nowUnix / secondsPerUTCDay
+	if utcDay < current.UtcDay {
+		return types.DailyDistribution{}, errors.New("区块时间回退，拒绝读取领取统计")
+	}
+	if utcDay > current.UtcDay {
+		return types.DailyDistribution{UtcDay: utcDay}, nil
+	}
+	return current, nil
 }
 
 func (k Keeper) Authority(goCtx context.Context, request *types.QueryAuthorityRequest) (*types.QueryAuthorityResponse, error) {
