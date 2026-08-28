@@ -1,6 +1,7 @@
 package module
 
 import (
+	"context"
 	"encoding/json"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -50,8 +51,9 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 }
 
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *gwruntime.ServeMux) {
-	// 当前构建生成 gRPC 查询服务；REST 网关将在引入 grpc-gateway 插件后显式生成，避免伪造 HTTP 路由。
-	_, _ = clientCtx, mux
+	if err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx)); err != nil {
+		panic(err)
+	}
 }
 
 // AppModule 将领取模块接入 SDK 的消息和查询服务路由。
