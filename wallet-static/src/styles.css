@@ -1,0 +1,20 @@
+:root { font-family: ui-rounded, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; color: #17333b; background: #f5efe4; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: radial-gradient(circle at top right, #f8cd83 0, transparent 34%), #f5efe4; }
+button, input { font: inherit; }
+button { border: 0; border-radius: 12px; padding: 13px 16px; background: #0e5966; color: white; font-weight: 700; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background 160ms; }
+button:hover { background: #0b4650; } button:active { transform: scale(.97); } button:disabled { opacity: .5; cursor: not-allowed; }
+input { width: 100%; padding: 12px; border: 1px solid #cfd1c9; border-radius: 10px; color: #17333b; background: #fffdf8; }
+label { display: grid; gap: 7px; font-size: 14px; font-weight: 700; color: #31525a; }
+.shell { min-height: 100vh; padding: 24px 16px 44px; }
+.app { max-width: 780px; margin: 0 auto; display: grid; gap: 14px; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; } header > div { display: flex; gap: 10px; align-items: center; } header p { margin: 0; font-size: 21px; font-weight: 900; } header small { display: block; font-size: 12px; font-weight: 600; color: #66808a; margin-top: 2px; }
+.brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 3px solid #e09b35; border-radius: 50%; background: #102f39; color: #ffc966; font-weight: 900; box-shadow: 0 5px 12px #1d505944; }
+.pill { border-radius: 99px; padding: 7px 10px; font-size: 12px; font-weight: 800; background: #e7dfd0; color: #705d3c; }.pill.ready { background: #d8eee2; color: #26704a; }
+.warning, .status { padding: 13px 15px; border-radius: 14px; border: 1px solid #edcf91; background: #fff7e6; font-size: 14px; line-height: 1.55; }.status { border-color: #bdd7da; background: #edf7f7; display: grid; gap: 4px; }.status span { color: #426973; font-size: 12px; }
+.balance-card { position: relative; overflow: hidden; padding: 26px; border-radius: 24px; background: linear-gradient(115deg, #0c2d37, #176273); color: #ecf7f5; box-shadow: 0 16px 35px #1e55543b; }.balance-card::after { content: "MM"; position: absolute; right: 20px; bottom: -37px; font: 900 120px/1 Georgia, serif; color: #ffffff10; }.balance-card span, .balance-card p { color: #c6dbdb; margin: 0; }.balance-card h1 { position: relative; margin: 9px 0; font-size: clamp(34px, 8vw, 56px); z-index: 1; }.balance-card h1 small { font-size: .42em; color: #f6be5a; }.balance-card p { max-width: 88%; font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }.outline { margin-top: 15px; border: 1px solid currentColor; background: transparent; color: inherit; }
+.card, .recovery { padding: 20px; border-radius: 18px; background: #fffdf8e8; border: 1px solid #e4dfd5; box-shadow: 0 8px 18px #765c2a12; }.card h2, .recovery h2 { margin: 0 0 8px; font-size: 18px; }.card p, .recovery p { margin: 0 0 14px; color: #597078; font-size: 14px; line-height: 1.55; }.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }.config-card { background: #f8fbf8e8; }
+form { display: grid; gap: 12px; }.address, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }.recovery { border-color: #ddaa4e; background: #fff5df; }.recovery code { display: block; padding: 13px; border-radius: 10px; color: #593d1c; background: #fffaf0; line-height: 1.7; word-spacing: 4px; }.activity { padding: 12px 0; border-top: 1px solid #e5e1d7; }.activity:first-of-type { border-top: 0; }.activity p { margin: 4px 0; }.activity code { color: #246273; font-size: 12px; }
+footer { padding: 8px; text-align: center; color: #65797e; font-size: 12px; line-height: 1.5; }
+@media (max-width: 580px) { .shell { padding: 16px 12px 36px; }.fields { grid-template-columns: 1fr; }.balance-card { padding: 22px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; } }
