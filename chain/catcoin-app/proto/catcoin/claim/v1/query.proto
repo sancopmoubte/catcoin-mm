@@ -6,14 +6,21 @@ option go_package = "github.com/sancopmoubte/my-mobile-chain/chain/catcoin-app/x
 
 import "catcoin/claim/v1/types.proto";
 import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
 
 option (gogoproto.goproto_getters_all) = false;
 
 // Query 让钱包读取已写入的链上领取进度与领取池余额。
 service Query {
-  rpc ClaimRecord(QueryClaimRecordRequest) returns (QueryClaimRecordResponse);
-  rpc Pool(QueryPoolRequest) returns (QueryPoolResponse);
-  rpc Authority(QueryAuthorityRequest) returns (QueryAuthorityResponse);
+  rpc ClaimRecord(QueryClaimRecordRequest) returns (QueryClaimRecordResponse) {
+    option (google.api.http).get = "/catcoin/claim/v1/claims/{claimer}";
+  }
+  rpc Pool(QueryPoolRequest) returns (QueryPoolResponse) {
+    option (google.api.http).get = "/catcoin/claim/v1/pool";
+  }
+  rpc Authority(QueryAuthorityRequest) returns (QueryAuthorityResponse) {
+    option (google.api.http).get = "/catcoin/claim/v1/authorities/{issuer_key_id}";
+  }
 }
 
 message QueryClaimRecordRequest {
@@ -35,6 +42,11 @@ message QueryPoolRequest {}
 message QueryPoolResponse {
   string denom = 1;
   uint64 available_umm = 2;
+  uint64 daily_claim_limit_umm = 3;
+  uint64 daily_distributed_umm = 4;
+  uint64 daily_remaining_umm = 5;
+  int64 utc_day = 6;
+  int64 next_reset_at_unix = 7;
 }
 
 message QueryAuthorityRequest {
