@@ -23,16 +23,16 @@ jobs:
     steps:
       - name: 获取公开源码
         uses: actions/checkout@v4
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: 配置 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: wallet-static/pnpm-lock.yaml
-      - name: 配置 pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - name: 安装、测试并构建静态 PWA
         working-directory: wallet-static
         env:
