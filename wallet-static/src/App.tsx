@@ -1,7 +1,5 @@
 import { DirectSecp256k1HdWallet, Registry } from "@cosmjs/proto-signing";
 import { coin, defaultRegistryTypes, SigningStargateClient, StargateClient } from "@cosmjs/stargate";
-import { Any } from "cosmjs-types/google/protobuf/any";
-import { AuthInfo, TxBody, TxRaw } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { BinaryWriter } from "cosmjs-types/binary";
 import { FormEvent, useMemo, useState } from "react";
 import { ClaimPoolStatus, defaultConfig, formatMm, isReadyForChain, isReadyForPoolQuery, isWalletAddress, mmToAtomic, parseClaimPoolStatus, PublicNetworkConfig } from "./wallet";
@@ -76,16 +74,14 @@ async function requestVoucher(address: string, config: PublicNetworkConfig): Pro
   return voucher;
 }
 
-async function claim(address: string, voucher: Voucher, config: PublicNetworkConfig): Promise<string> {
-  const client = await StargateClient.connect(config.rpcEndpoint);
+async function claim(address: string, voucher: Voucher, config: PublicNetworkConfig, wallet: DirectSecp256k1HdWallet): Promise<string> {
+  const client = await SigningStargateClient.connectWithSigner(config.rpcEndpoint, wallet, { registry: registry() });
   try {
-    const claimRegistry = registry();
-    const value = { claimer: address, voucher };
-    const message = Any.fromPartial({ typeUrl: MSG_CLAIM_TYPE_URL, value: claimRegistry.encode({ typeUrl: MSG_CLAIM_TYPE_URL, value }) });
-    const bodyBytes = TxBody.encode(TxBody.fromPartial({ messages: [message], memo: "Catcoin static PWA candidate claim" })).finish();
-    const authInfoBytes = AuthInfo.encode(AuthInfo.fromPartial({ signerInfos: [] })).finish();
-    const result = await client.broadcastTx(TxRaw.encode(TxRaw.fromPartial({ bodyBytes, authInfoBytes, signatures: [] })).finish());
-    if (result.code !== 0) throw new Error(result.rawLog || `领取交易失败，代码 ${result.code}`);
+    const result = await client.signAndBroadcast(address, [{
+      typeUrl: MSG_CLAIM_TYPE_URL,
+      value: { claimer: address, voucher },
+    }], ZERO_FEE, "Catcoin static PWA claim");
+    if (result.code !== 0) throw new Error(result.rawLog || "领取交易失败，代码 " + result.code);
     return result.transactionHash;
   } finally { client.disconnect(); }
 }
@@ -182,7 +178,7 @@ export default function App() {
     setBusy("claim");
     try {
       const voucher = await requestVoucher(address, config);
-      const txHash = await claim(address, voucher, config);
+      const txHash = await claim(address, voucher, config, wallet);
       addActivity({ title: "候选试用领取已广播", detail: "额度由链上地址、凭证与每日限制共同决定", txHash });
       setNotice("领取交易已写入候选链。请刷新余额确认。"); await refresh();
     } catch (error) { setNotice(error instanceof Error ? error.message : "领取失败"); } finally { setBusy(null); }
@@ -216,14 +212,14 @@ export default function App() {
       <section className="card config-card"><h2>1. 公开网络配置</h2><p>此处只填公开 HTTPS 地址，不填助记词、私钥或密码。候选节点停机时，钱包仍可离线保留，但不能查询或广播。</p><div className="fields"><label>网络名称<input value={config.networkLabel} onChange={event => updateConfig("networkLabel", event.target.value)} /></label><label>Chain ID<input value={config.chainId} onChange={event => updateConfig("chainId", event.target.value)} /></label><label>HTTPS RPC<input inputMode="url" placeholder="https://rpc.example.com" value={config.rpcEndpoint} onChange={event => updateConfig("rpcEndpoint", event.target.value)} /></label><label>HTTPS 链 API（领取池查询）<input inputMode="url" placeholder="https://api.example.com" value={config.apiEndpoint} onChange={event => updateConfig("apiEndpoint", event.target.value)} /></label><label>HTTPS 凭证服务（领取可选）<input inputMode="url" placeholder="https://issuer.example.com" value={config.issuerEndpoint} onChange={event => updateConfig("issuerEndpoint", event.target.value)} /></label></div></section>
 
       {!storedWallet ? <section className="card"><h2>2. 创建本机钱包</h2><p>钱包只加密保存在此浏览器。本页没有登录、数据库或后台钱包托管。</p><form onSubmit={createWallet}><label>设置本机钱包密码<input type="password" autoComplete="new-password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} placeholder="至少 8 位" required /></label><button disabled={busy !== null}>{busy === "create" ? "正在创建…" : "创建并解锁"}</button></form></section> : !unlocked ? <section className="card"><h2>2. 解锁本机钱包</h2><p className="address">{address}</p><form onSubmit={unlockWallet}><label>本机钱包密码<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required /></label><button disabled={busy !== null}>{busy === "unlock" ? "正在解锁…" : "解锁钱包"}</button></form></section> : <>
-        <section className="card"><h2>2. 领取候选试用 MM</h2><p>链上规则：首笔 0.00000001 MM、每 24 小时递增、每地址最多 1 MM；全网每个 UTC 日最多从固定领取池分发 210 MM。领取需要独立 HTTPS 凭证服务，额度和防批量规则由链执行。</p><button onClick={() => void claimCandidate()} disabled={busy !== null || !config.issuerEndpoint}>{busy === "claim" ? "正在领取…" : "一键领取候选试用 MM"}</button></section>
+        <section className="card"><h2>2. 领取候选试用 MM</h2><p>链上规则：总领取池固定为 1 MM，精度为 18 位；首次领取 0.9 MM，之后每次按共享剩余池的一半发放，并受 24 小时间隔和链上凭证校验约束。领取需要独立 HTTPS 凭证服务，额度由链执行。</p><button onClick={() => void claimCandidate()} disabled={busy !== null}>{busy === "claim" ? "正在签名并领取…" : "一键领取候选试用 MM"}</button></section>
         <section className="card"><h2>3. 本机签名转账</h2><p>私钥不离开当前设备。交易直接发送至配置的 RPC，候选规则为 0 MM 手续费。</p><form onSubmit={send}><label>收款地址<input value={recipient} onChange={event => setRecipient(event.target.value)} placeholder={`${config.addressPrefix}1…`} required /></label><label>金额（MM）<input inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} required /></label><button disabled={busy !== null || !ready}>{busy === "send" ? "正在签名并广播…" : "签名并发送"}</button></form></section>
       </>}
 
       {mnemonic && <section className="recovery"><h2>立即离线抄写恢复短语</h2><code>{mnemonic}</code><p>不要截图、不要发送给任何人。关闭后本页不会再次显示。</p><button className="outline" onClick={() => setMnemonic("")}>我已安全抄写</button></section>}
-      <section className="status"><strong>状态：</strong>{notice}<span>区块高度：{height} · 候选每日领取上限：210 MM（固定池分发，不增发）</span></section>
+      <section className="status"><strong>状态：</strong>{notice}<span>区块高度：{height} · 固定领取池：1 MM · 18 位精度 · 不增发</span></section>
       {activity.length > 0 && <section className="card"><h2>本机操作记录</h2>{activity.map(item => <article className="activity" key={`${item.title}-${item.txHash}`}><strong>{item.title}</strong><p>{item.detail}</p>{item.txHash && <code>{item.txHash}</code>}</article>)}</section>}
       <footer>纯静态构建 · 本地钱包 · 公开 RPC · 不含数据库、登录、服务端 API 或任何硬编码密钥</footer>
     </section>
   </main>;
-}
+                                }
