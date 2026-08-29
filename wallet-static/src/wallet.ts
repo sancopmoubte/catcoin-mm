@@ -1,7 +1,9 @@
 import { fromBech32 } from "@cosmjs/encoding";
 
-export const ATOMIC_PER_MM = 100_000_000n;
-export const DAILY_CLAIM_LIMIT_UMM = 21_000_000_000n;
+export const ATOMIC_PER_MM = 1_000_000_000_000_000_000n;
+export const TOTAL_SUPPLY_UMM = ATOMIC_PER_MM;
+export const FIRST_CLAIM_UMM = 900_000_000_000_000_000n;
+export const DAILY_CLAIM_LIMIT_UMM = TOTAL_SUPPLY_UMM;
 
 export type PublicNetworkConfig = {
   networkLabel: string;
@@ -16,7 +18,7 @@ export type PublicNetworkConfig = {
 
 export const defaultConfig: PublicNetworkConfig = {
   networkLabel: "候选试用网络（非正式资产）",
-  chainId: "catcoin-claim-trial-8",
+  chainId: "catcoin-pos-1",
   rpcEndpoint: "",
   apiEndpoint: "",
   issuerEndpoint: "",
@@ -28,15 +30,15 @@ export const defaultConfig: PublicNetworkConfig = {
 export function formatMm(amount: string | bigint): string {
   const raw = BigInt(amount);
   const whole = raw / ATOMIC_PER_MM;
-  const fraction = (raw % ATOMIC_PER_MM).toString().padStart(8, "0").replace(/0+$/, "");
-  return fraction ? `${whole}.${fraction}` : whole.toString();
+  const fraction = (raw % ATOMIC_PER_MM).toString().padStart(18, "0").replace(/0+$/, "");
+  return fraction ? whole + "." + fraction : whole.toString();
 }
 
 export function mmToAtomic(input: string): string {
   const normalized = input.trim();
-  if (!/^\d+(\.\d{1,8})?$/.test(normalized)) throw new Error("金额须为大于 0 且最多 8 位小数的 MM 数字");
+  if (!/^\d+(\.\d{1,18})?$/.test(normalized)) throw new Error("金额须为大于 0 且最多 18 位小数的 MM 数字");
   const [whole, fraction = ""] = normalized.split(".");
-  const value = BigInt(whole) * ATOMIC_PER_MM + BigInt((fraction + "00000000").slice(0, 8));
+  const value = BigInt(whole) * ATOMIC_PER_MM + BigInt((fraction + "000000000000000000").slice(0, 18));
   if (value <= 0n) throw new Error("金额必须大于 0");
   return value.toString();
 }
@@ -65,11 +67,10 @@ export type ClaimPoolStatus = {
 
 function unsignedInteger(value: unknown, field: string): string {
   const normalized = typeof value === "number" ? String(value) : typeof value === "string" ? value : "";
-  if (!/^\d+$/.test(normalized)) throw new Error(`领取池接口的 ${field} 不是无符号整数`);
+  if (!/^\d+$/.test(normalized)) throw new Error("领取池接口的 " + field + " 不是无符号整数");
   return normalized;
 }
 
-// gRPC-Gateway 的 JSON 会把 uint64/int64 编码为字符串；同时接受数值以兼容受控网关。
 export function parseClaimPoolStatus(value: unknown): ClaimPoolStatus {
   if (!value || typeof value !== "object") throw new Error("领取池接口未返回对象");
   const source = value as Record<string, unknown>;
